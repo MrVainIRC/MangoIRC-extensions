@@ -1,0 +1,43 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Finder metadata
+._*
+
+# Trash
+.Trashes
+
+# Spotlight
+.Spotlight-V100
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# IDE / editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Build / package output
+dist/
+build/
+out/
+
+# Local archives/packages
+*.zip
+*.grove
+
+# Node dependencies, if ever used
+node_modules/
+
+# Environment files
+.env
+.env.*

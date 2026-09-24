@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>LinkGuard Settings</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app-shell">
+<header class="hero">
+      <div class="hero-copy">
+        <span class="product-kicker">LINKGUARD</span>
+        <h1>Link protection, without the noise.</h1>
+        <p>Checks links against locally stored threat data without sending chat URLs to external services.</p>
+      </div>
+      <div class="hero-status" aria-label="Marker preview">
+        <span class="hero-status-label">Markers</span>
+        <div class="marker-pair">
+          <span id="preview-good" class="marker-chip marker-good">✓</span>
+          <span id="preview-bad" class="marker-chip marker-bad">✕</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="save-bar" role="region" aria-label="Save settings">
+      <span id="save-state" class="save-state">No unsaved changes</span>
+      <button id="save-settings" class="button button-primary" type="button" disabled>Save changes</button>
+    </div>
+
+
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <h2>Link display</h2>
+          <p>Choose how checked links appear in chat.</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <label class="pref-row">
+          <span class="pref-copy">
+            <strong>Mark links</strong>
+            <small>Show a status symbol next to checked links.</small>
+          </span>
+          <span class="switch"><input id="mark-links" type="checkbox"><span></span></span>
+        </label>
+
+        <div class="pref-row split-control">
+          <span class="pref-copy">
+            <strong>Not listed</strong>
+            <small>Shown when a link is not found in the active lists. This does not guarantee safety.</small>
+          </span>
+          <select id="good-symbol" class="select-control" aria-label="Not listed link marker">
+            <option value="✓">✓ Check</option>
+            <option value="✔">✔ Heavy check</option>
+            <option value="○">○ Circle</option>
+            <option value="·">· Dot</option>
+            <option value="">None</option>
+          </select>
+        </div>
+
+        <div class="advanced-note rule-priority-note">
+          <span class="note-icon">i</span>
+          <p>A non-empty “not listed” marker may affect Mango’s native link previews. Leave it empty to preserve normal previews.</p>
+        </div>
+
+
+        <div class="pref-row split-control">
+          <span class="pref-copy">
+            <strong>Listed</strong>
+            <small>Shown when a link matches an active threat source or block rule.</small>
+          </span>
+          <select id="bad-symbol" class="select-control" aria-label="Listed link marker">
+            <option value="✕">✕ Cross</option>
+            <option value="×">× Multiply</option>
+            <option value="!">! Alert</option>
+            <option value="⚠">⚠ Warning</option>
+          </select>
+        </div>
+<label class="pref-row">
+          <span class="pref-copy">
+            <strong>Marker position</strong>
+            <small>Place the status symbol before or after the link.</small>
+          </span>
+          <select id="marker-position" class="select-control marker-position-select">
+            <option value="after">After URL</option>
+            <option value="before">Before URL</option>
+          </select>
+        </label>
+</div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <h2>Protection</h2>
+          <p>Choose how potentially unsafe links are handled.</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <label class="pref-row">
+          <span class="pref-copy">
+            <strong>Defang listed URLs</strong>
+            <small>Display unsafe links as hxxp/hxxps to reduce accidental clicks.</small>
+          </span>
+          <span class="switch"><input id="defang" type="checkbox"><span></span></span>
+        </label>
+        <label class="pref-row">
+          <span class="pref-copy">
+            <strong>Treat HTTP links as unsafe</strong>
+            <small>Treat unencrypted http:// links as unsafe.</small>
+          </span>
+          <span class="switch"><input id="http-unsafe" type="checkbox"><span></span></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading action-heading">
+        <div>
+          <h2>Built-in lists</h2>
+          <p>Choose which built-in threat lists LinkGuard uses.</p>
+        </div>
+</div>
+
+      <div class="panel source-panel">
+        <label class="source-row">
+          <span class="source-badge">OP</span>
+          <span class="source-main">
+            <span class="source-title-line"><strong>OpenPhish Community</strong><span id="pill-openphish" class="status-pill">Waiting</span></span>
+            <small>Checks links against the OpenPhish community feed.</small>
+            <em id="status-openphish">Not loaded</em>
+          </span>
+          <span class="switch"><input id="source-openphish" type="checkbox"><span></span></span>
+        </label>
+
+        <label class="source-row">
+          <span class="source-badge">SB</span>
+          <span class="source-main">
+            <span class="source-title-line"><strong>Scam Blocklist Light</strong><span id="pill-scam-light" class="status-pill">Waiting</span></span>
+            <small>Checks links against Scam Blocklist Light.</small>
+            <em id="status-scam-light">Not loaded</em>
+          </span>
+          <span class="switch"><input id="source-scam-light" type="checkbox"><span></span></span>
+        </label>
+</div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <h2>Additional GitHub lists</h2>
+          <p>Add public GitHub lists containing links.</p>
+        </div>
+        <span id="custom-source-count" class="section-counter">0 / 8</span>
+      </div>
+
+      <div class="panel list-manager">
+        <form id="add-source-form" class="add-source-form">
+          <div class="url-field">
+            <span class="url-icon">↗</span>
+            <input id="source-url" type="url" inputmode="url" autocapitalize="none" autocomplete="off" spellcheck="false"
+                   placeholder="github.com/owner/repo/blob/main/list.txt">
+          </div>
+          <button type="submit" class="button button-primary">Add list</button>
+        </form>
+        <p id="source-error" class="inline-error" role="alert"></p>
+        <div id="custom-sources" class="custom-sources"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <h2>Local rules</h2>
+          <p>Override link results with your own allow or block rules.</p>
+        </div>
+        <span id="custom-rule-count" class="section-counter">0 rules</span>
+      </div>
+
+      <div class="panel rule-manager">
+        <div class="rule-builder">
+          <div class="rule-builder-options">
+            <select id="rule-action" class="select-control" aria-label="Rule action">
+              <option value="block">Block</option>
+              <option value="allow">Allow</option>
+            </select>
+
+            <select id="rule-kind" class="select-control" aria-label="Rule type">
+              <option value="domain">Domain</option>
+              <option value="url">Exact link</option>
+              <option value="pattern">Wildcard</option>
+            </select>
+          </div>
+
+          <div class="rule-builder-input">
+            <input id="rule-value" type="text" autocapitalize="none" autocomplete="off" spellcheck="false"
+                   placeholder="example.com">
+            <button id="add-rule" class="button button-primary" type="button">Add rule</button>
+          </div>
+
+          <p id="rule-help" class="rule-help">Matches the domain and all of its subdomains.</p>
+          <p id="rule-error" class="inline-error" role="alert"></p>
+        </div>
+
+        <div id="custom-rules" class="custom-rules"></div>
+
+        <div class="advanced-note rule-priority-note">
+          <span class="note-icon">i</span>
+          <p>If several rules match, the last matching rule is used.</p>
+        </div>
+      </div>
+    </section>
+
+
+    
+
+    <section class="section">
+      <div class="section-heading">
+        <div>
+          <h2>Updates &amp; storage</h2>
+          <p>Control list update frequency and resource limits.</p>
+        </div>
+      </div>
+
+      <div class="panel updates-panel">
+        <div class="pref-row split-control compact-row">
+          <span class="pref-copy">
+            <strong>Refresh interval</strong>
+            <small>Choose how often enabled lists are checked for updates.</small>
+          </span>
+          <select id="refresh-hours" class="select-control">
+            <option value="6">6 hours</option>
+            <option value="12">12 hours</option>
+            <option value="24">24 hours</option>
+          </select>
+        </div>
+      </div>
+</section>
+
+    <footer class="status-footer">
+      <div class="status-line" aria-live="polite">
+        <span class="live-dot"></span>
+        <p id="summary-status">Waiting for LinkGuard…</p>
+      </div>
+      <p class="attribution">
+        Made by MrVain · <a href="https://github.com/MrVainIRC" target="_blank" rel="noopener noreferrer">https://github.com/MrVainIRC</a>
+      </p>
+    </footer>
+  </main>
+
+  <script src="settings.js"></script>
+</body>
+</html>
