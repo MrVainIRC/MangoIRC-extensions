@@ -13,11 +13,6 @@ on:
         required: true
         type: string
 
-      release_notes:
-        description: Release notes in Markdown
-        required: false
-        type: string
-
       create_tag:
         description: Create the version tag
         required: true
@@ -86,6 +81,18 @@ jobs:
             exit 1
           fi
 
+          if [[ "${{ inputs.create_release }}" == "true" ]]; then
+            if [[ ! -f "$EXTENSION/RELEASE_NOTES.md" ]]; then
+              echo "Missing $EXTENSION/RELEASE_NOTES.md"
+              exit 1
+            fi
+
+            if [[ ! -s "$EXTENSION/RELEASE_NOTES.md" ]]; then
+              echo "$EXTENSION/RELEASE_NOTES.md is empty"
+              exit 1
+            fi
+          fi
+
           SLUG="$(printf '%s' "$EXTENSION" \
             | tr '[:upper:]' '[:lower:]' \
             | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+|-+$//g')"
@@ -119,7 +126,7 @@ jobs:
             zip -qr "$RUNNER_TEMP/package/${EXTENSION}-${VERSION}.grove" .
           )
 
-          echo "Created:"
+          echo "Created Grove package:"
           ls -lh "$RUNNER_TEMP/package/${EXTENSION}-${VERSION}.grove"
 
       - name: Build release branch
@@ -196,18 +203,11 @@ jobs:
           TAG: ${{ steps.meta.outputs.tag }}
           EXTENSION: ${{ inputs.extension }}
           VERSION: ${{ inputs.version }}
-          RELEASE_NOTES: ${{ inputs.release_notes }}
         run: |
           set -euo pipefail
 
           ASSET="$RUNNER_TEMP/package/${EXTENSION}-${VERSION}.grove"
-          NOTES_FILE="$RUNNER_TEMP/release-notes.md"
-
-          if [[ -n "$RELEASE_NOTES" ]]; then
-            printf '%s\n' "$RELEASE_NOTES" > "$NOTES_FILE"
-          else
-            printf 'Release of %s v%s.\n' "$EXTENSION" "$VERSION" > "$NOTES_FILE"
-          fi
+          NOTES_FILE="$GITHUB_WORKSPACE/$EXTENSION/RELEASE_NOTES.md"
 
           gh release create "$TAG" "$ASSET" \
             --title "$EXTENSION v$VERSION" \
@@ -243,6 +243,7 @@ jobs:
 
             if [[ "${{ inputs.create_release }}" == "true" ]]; then
               echo "- GitHub Release: created"
+              echo "- Release notes: \`$EXTENSION/RELEASE_NOTES.md\`"
               echo "- Grove asset: \`${EXTENSION}-${VERSION}.grove\`"
             else
               echo "- GitHub Release: not created"
