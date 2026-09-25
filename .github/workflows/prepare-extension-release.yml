@@ -14,19 +14,19 @@ on:
         type: string
 
       create_tag:
-        description: Create the version tag
+        description: Create or reuse the version tag
         required: true
         default: true
         type: boolean
 
       update_latest_tag:
-        description: Update the extension-specific latest tag
+        description: Update the extension-specific latest tag and release
         required: true
         default: true
         type: boolean
 
       create_release:
-        description: Create a GitHub Release and attach the .grove package
+        description: Create GitHub Releases and attach the .grove package
         required: true
         default: true
         type: boolean
@@ -39,11 +39,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # -----------------------------------------------------------------------
+      # Checkout
+      # -----------------------------------------------------------------------
+
       - name: Check out main
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.event.repository.default_branch }}
+
+      # -----------------------------------------------------------------------
+      # Validation and metadata
+      # -----------------------------------------------------------------------
 
       - name: Validate extension
         id: meta
@@ -111,6 +119,10 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
 
+      # -----------------------------------------------------------------------
+      # Release files
+      # -----------------------------------------------------------------------
+
       - name: Prepare release files
         shell: bash
         env:
@@ -122,12 +134,14 @@ jobs:
           mkdir -p "$RUNNER_TEMP/release"
 
           if [[ "${{ inputs.create_release }}" == "true" ]]; then
-            cp "$EXTENSION/RELEASE_NOTES.md" \
+            cp \
+              "$EXTENSION/RELEASE_NOTES.md" \
               "$RUNNER_TEMP/release/RELEASE_NOTES.md"
           fi
 
           (
             cd "$EXTENSION"
+
             zip -qr \
               "$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove" \
               .
@@ -135,6 +149,10 @@ jobs:
 
           echo "Created Grove package:"
           ls -lh "$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove"
+
+      # -----------------------------------------------------------------------
+      # Extension-specific source branch
+      # -----------------------------------------------------------------------
 
       - name: Build release branch
         shell: bash
@@ -170,10 +188,17 @@ jobs:
 
           git branch -M "$RELEASE_BRANCH"
 
-          git push --force origin "HEAD:refs/heads/$RELEASE_BRANCH"
+          git push --force \
+            origin \
+            "HEAD:refs/heads/$RELEASE_BRANCH"
 
-      - name: Create version tag
+      # -----------------------------------------------------------------------
+      # Permanent version tag
+      # -----------------------------------------------------------------------
+
+      - name: Create or reuse version tag
         if: ${{ inputs.create_tag }}
+        id: version_tag
         shell: bash
         env:
           TAG: ${{ steps.meta.outputs.tag }}
@@ -182,27 +207,45 @@ jobs:
         run: |
           set -euo pipefail
 
+          CURRENT_TREE="$(git rev-parse HEAD^{tree})"
+
           if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-            echo "Tag already exists: $TAG"
-            echo "Existing version tags are never overwritten."
-            exit 1
+            echo "Version tag already exists: $TAG"
+
+            git fetch --force \
+              origin \
+              "refs/tags/$TAG:refs/tags/$TAG"
+
+            TAG_TREE="$(git rev-parse "$TAG^{tree}")"
+
+            if [[ "$TAG_TREE" != "$CURRENT_TREE" ]]; then
+              echo "Existing tag $TAG points to different source contents."
+              echo "Version tags are immutable and will not be overwritten."
+              exit 1
+            fi
+
+            echo "Existing version tag matches the current release contents."
+          else
+            git tag \
+              -a "$TAG" \
+              -m "$EXTENSION v$VERSION"
+
+            git push \
+              origin \
+              "refs/tags/$TAG"
+
+            echo "Created version tag: $TAG"
           fi
 
-          git tag -a "$TAG" -m "$EXTENSION v$VERSION"
-          git push origin "refs/tags/$TAG"
+          VERSION_COMMIT="$(git rev-list -n 1 "$TAG")"
 
-      - name: Update latest tag
-        if: ${{ inputs.create_tag && inputs.update_latest_tag }}
-        shell: bash
-        env:
-          LATEST_TAG: ${{ steps.meta.outputs.latest_tag }}
-        run: |
-          set -euo pipefail
+          echo "version_commit=$VERSION_COMMIT" >> "$GITHUB_OUTPUT"
 
-          git tag -f "$LATEST_TAG"
-          git push --force origin "refs/tags/$LATEST_TAG"
+      # -----------------------------------------------------------------------
+      # Permanent version release
+      # -----------------------------------------------------------------------
 
-      - name: Create GitHub Release
+      - name: Create version release
         if: ${{ inputs.create_release && inputs.create_tag }}
         shell: bash
         env:
@@ -226,9 +269,91 @@ jobs:
             exit 1
           fi
 
-          gh release create "$TAG" "$ASSET" \
-            --title "$EXTENSION v$VERSION" \
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Version release already exists: $TAG"
+            echo "Existing permanent release will not be modified."
+          else
+            gh release create "$TAG" "$ASSET" \
+              --title "$EXTENSION v$VERSION" \
+              --notes-file "$NOTES_FILE"
+
+            echo "Created version release: $TAG"
+          fi
+
+      # -----------------------------------------------------------------------
+      # Moving extension-specific latest tag
+      # -----------------------------------------------------------------------
+
+      - name: Update latest tag
+        if: ${{ inputs.create_tag && inputs.update_latest_tag }}
+        shell: bash
+        env:
+          LATEST_TAG: ${{ steps.meta.outputs.latest_tag }}
+          VERSION_COMMIT: ${{ steps.version_tag.outputs.version_commit }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$VERSION_COMMIT" ]]; then
+            echo "Version commit is unavailable."
+            exit 1
+          fi
+
+          git tag \
+            -f "$LATEST_TAG" \
+            "$VERSION_COMMIT"
+
+          git push \
+            --force \
+            origin \
+            "refs/tags/$LATEST_TAG"
+
+          echo "Updated latest tag: $LATEST_TAG"
+
+      # -----------------------------------------------------------------------
+      # Moving extension-specific latest release
+      # -----------------------------------------------------------------------
+
+      - name: Create latest release
+        if: ${{ inputs.create_release && inputs.create_tag && inputs.update_latest_tag }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LATEST_TAG: ${{ steps.meta.outputs.latest_tag }}
+          EXTENSION: ${{ inputs.extension }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          ASSET="$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove"
+          NOTES_FILE="$RUNNER_TEMP/release/RELEASE_NOTES.md"
+
+          if [[ ! -f "$ASSET" ]]; then
+            echo "Grove package not found: $ASSET"
+            exit 1
+          fi
+
+          if [[ ! -f "$NOTES_FILE" ]]; then
+            echo "Release notes not found: $NOTES_FILE"
+            exit 1
+          fi
+
+          if gh release view "$LATEST_TAG" >/dev/null 2>&1; then
+            echo "Removing previous latest release: $LATEST_TAG"
+
+            gh release delete \
+              "$LATEST_TAG" \
+              --yes
+          fi
+
+          gh release create "$LATEST_TAG" "$ASSET" \
+            --title "$EXTENSION Latest — v$VERSION" \
             --notes-file "$NOTES_FILE"
+
+          echo "Created latest release: $LATEST_TAG"
+
+      # -----------------------------------------------------------------------
+      # Summary
+      # -----------------------------------------------------------------------
 
       - name: Summary
         if: ${{ always() }}
@@ -245,7 +370,7 @@ jobs:
             echo
             echo "- Extension: \`$EXTENSION\`"
             echo "- Version: \`$VERSION\`"
-            echo "- Branch: \`$RELEASE_BRANCH\`"
+            echo "- Source branch: \`$RELEASE_BRANCH\`"
 
             if [[ "${{ inputs.create_tag }}" == "true" ]]; then
               echo "- Version tag: \`$TAG\`"
@@ -253,14 +378,21 @@ jobs:
               echo "- Version tag: not created"
             fi
 
-            if [[ "${{ inputs.update_latest_tag }}" == "true" ]]; then
-              echo "- Latest tag: \`$LATEST_TAG\`"
+            if [[ "${{ inputs.create_release }}" == "true" ]]; then
+              echo "- Version release: \`$EXTENSION v$VERSION\`"
+              echo "- Grove asset: \`${EXTENSION}-${VERSION}.grove\`"
+              echo "- Release notes: \`$EXTENSION/RELEASE_NOTES.md\`"
             else
-              echo "- Latest tag: not updated"
+              echo "- Version release: not created"
             fi
 
-            if [[ "${{ inputs.create_release }}" == "true" ]]; then
-              echo "- Grove asset: \`${EXTENSION}-${VERSION}.grove\`"
-              echo "- Release notes source: \`$EXTENSION/RELEASE_NOTES.md\`"
+            if [[ "${{ inputs.update_latest_tag }}" == "true" ]]; then
+              echo "- Latest tag: \`$LATEST_TAG\`"
+
+              if [[ "${{ inputs.create_release }}" == "true" ]]; then
+                echo "- Latest release: \`$EXTENSION Latest — v$VERSION\`"
+              fi
+            else
+              echo "- Latest tag/release: not updated"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
