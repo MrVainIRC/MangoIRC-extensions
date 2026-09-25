@@ -20,6 +20,8 @@ Here’s a quick list of the extensions you can find here:
 
 - **LinkGuard:** Checks links in IRC messages against local threat lists, marks potentially unsafe links, and can optionally defang them.
 
+- **DigitalTouch** Create live animated touch messages with disappearing ink and touch effects.
+
 I’ll keep adding more as I work on them!
 
 ## Installation
