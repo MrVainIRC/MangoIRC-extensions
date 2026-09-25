@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DigitalTouch Settings</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="settings-page">
+  <main class="settings-shell-lg">
+    <header class="settings-hero-lg">
+      <div class="settings-hero-copy-lg">
+        <span class="settings-product-kicker">DIGITALTOUCH</span>
+        <h1>Make the export fit the moment.</h1>
+        <p>Choose the output format and tune only the settings that matter for that format.</p>
+      </div>
+      <div class="settings-hero-status" aria-label="Current export profile">
+        <span class="settings-hero-status-label">Export</span>
+        <div class="settings-profile-pair">
+          <span id="preview-format" class="settings-profile-chip settings-profile-primary">GIF</span>
+          <span id="preview-preset" class="settings-profile-chip">Balanced</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="settings-save-bar" role="region" aria-label="Save settings">
+      <span id="save-state" class="settings-save-state">No unsaved changes</span>
+      <button id="save" class="settings-button settings-button-primary" type="button" disabled>Save changes</button>
+    </div>
+
+    <section class="settings-section">
+      <div class="settings-section-heading">
+        <div>
+          <h2>Output</h2>
+          <p>Choose the default format and quality profile.</p>
+        </div>
+      </div>
+
+      <div class="settings-panel-lg">
+        <label class="settings-pref-row settings-split-control">
+          <span class="settings-pref-copy">
+            <strong>Default format</strong>
+            <small>The composer sends this format by default.</small>
+          </span>
+          <select id="format" class="settings-select-control">
+            <option value="gif">GIF</option>
+            <option value="apng">APNG</option>
+            <option value="webp">WebP</option>
+            <option value="webm">WebM</option>
+            <option value="mp4">MP4</option>
+          </select>
+        </label>
+
+        <label class="settings-pref-row settings-split-control">
+          <span class="settings-pref-copy">
+            <strong>Quality preset</strong>
+            <small>Changing the preset updates the related settings immediately.</small>
+          </span>
+          <select id="preset" class="settings-select-control">
+            <option value="small">Small</option>
+            <option value="balanced">Balanced</option>
+            <option value="high">High</option>
+            <option value="max">Max</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <div class="settings-section-heading">
+        <div>
+          <h2>Animation</h2>
+          <p>Control the square export size and temporal resolution.</p>
+        </div>
+      </div>
+
+      <div class="settings-panel-lg">
+        <label class="settings-pref-row settings-split-control">
+          <span class="settings-pref-copy">
+            <strong>Export size</strong>
+            <small>Square output resolution.</small>
+          </span>
+          <select id="size" class="settings-select-control">
+            <option value="256">256 × 256</option>
+            <option value="320">320 × 320</option>
+            <option value="360">360 × 360</option>
+            <option value="420">420 × 420</option>
+            <option value="480">480 × 480</option>
+          </select>
+        </label>
+
+        <label class="settings-pref-row settings-split-control">
+          <span class="settings-pref-copy">
+            <strong>Frame rate</strong>
+            <small>Higher values look smoother and increase file size.</small>
+          </span>
+          <select id="fps" class="settings-select-control">
+            <option value="10">10 fps</option>
+            <option value="12">12 fps</option>
+            <option value="15">15 fps</option>
+            <option value="18">18 fps</option>
+            <option value="24">24 fps</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section id="webpSection" class="settings-section">
+      <div class="settings-section-heading">
+        <div>
+          <h2>WebP</h2>
+          <p>Adjust the bundled WebP encoder.</p>
+        </div>
+      </div>
+
+      <div class="settings-panel-lg">
+        <div class="settings-pref-row settings-split-control">
+          <span class="settings-pref-copy">
+            <strong>Quality</strong>
+            <small>100 is lossless. Lower values reduce color precision for smaller files.</small>
+          </span>
+          <div class="settings-range-control">
+            <input id="webpQuality" type="range" min="40" max="100" step="1" value="90">
+            <span id="webpQualityValue">90</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="videoSection" class="settings-section">
+      <div class="settings-section-heading">
+        <div>
+          <h2>Video</h2>
+          <p>Choose the recording bitrate for WebM and MP4.</p>
+        </div>
+      </div>
+
+      <div class="settings-panel-lg">
+        <label class="settings-pref-row settings-split-control">
+          <span class="settings-pref-copy">
+            <strong>Video bitrate</strong>
+            <small>Higher values preserve more detail and create larger files.</small>
+          </span>
+          <select id="videoBitrate" class="settings-select-control">
+            <option value="1200000">1.2 Mbps</option>
+            <option value="1800000">1.8 Mbps</option>
+            <option value="2500000">2.5 Mbps</option>
+            <option value="3500000">3.5 Mbps</option>
+            <option value="5000000">5.0 Mbps</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="settings-section">
+      <div class="settings-section-heading">
+        <div>
+          <h2>Format notes</h2>
+          <p>Compatibility and size depend on the selected output format.</p>
+        </div>
+      </div>
+      <div class="settings-advanced-note">
+        <span class="settings-note-icon">i</span>
+        <p id="formatNote">GIF is usually the most compatible option.</p>
+      </div>
+    </section>
+
+    <footer class="settings-status-footer">
+      <div class="settings-status-line" aria-live="polite">
+        <span class="settings-live-dot"></span>
+        <p id="status">Ready.</p>
+      </div>
+      <p class="settings-attribution">Made by MrVain · <a href="https://github.com/MrVainIRC" target="_blank" rel="noopener noreferrer">https://github.com/MrVainIRC</a></p>
+    </footer>
+  </main>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // ---------------------------------------------------------------------------
+    // Settings model
+    // ---------------------------------------------------------------------------
+
+    const DEFAULTS = {
+      format: 'gif',
+      preset: 'balanced',
+      exportSize: 360,
+      fps: 18,
+      webpQuality: 90,
+      videoBitrate: 2500000
+    };
+
+    const PRESETS = {
+      small:    { exportSize: 256, fps: 10, webpQuality: 72, videoBitrate: 1200000 },
+      balanced: { exportSize: 360, fps: 18, webpQuality: 90, videoBitrate: 2500000 },
+      high:     { exportSize: 420, fps: 18, webpQuality: 96, videoBitrate: 3500000 },
+      max:      { exportSize: 480, fps: 24, webpQuality: 100, videoBitrate: 5000000 }
+    };
+
+    const KEY = 'export-settings';
+    const FORMATS = ['gif', 'apng', 'webp', 'webm', 'mp4'];
+    const PRESET_NAMES = ['small', 'balanced', 'high', 'max', 'custom'];
+    const SIZES = [256, 320, 360, 420, 480];
+    const FPS_VALUES = [10, 12, 15, 18, 24];
+    const BITRATES = [1200000, 1800000, 2500000, 3500000, 5000000];
+
+    // ---------------------------------------------------------------------------
+    // DOM references
+    // ---------------------------------------------------------------------------
+
+    const els = {
+      format: document.getElementById('format'),
+      preset: document.getElementById('preset'),
+      size: document.getElementById('size'),
+      fps: document.getElementById('fps'),
+      webpQuality: document.getElementById('webpQuality'),
+      webpQualityValue: document.getElementById('webpQualityValue'),
+      videoBitrate: document.getElementById('videoBitrate'),
+      webpSection: document.getElementById('webpSection'),
+      videoSection: document.getElementById('videoSection'),
+      formatNote: document.getElementById('formatNote'),
+      previewFormat: document.getElementById('preview-format'),
+      previewPreset: document.getElementById('preview-preset'),
+      save: document.getElementById('save'),
+      saveState: document.getElementById('save-state'),
+      status: document.getElementById('status')
+    };
+
+    let savedSnapshot = '';
+
+    // ---------------------------------------------------------------------------
+    // Form state
+    // ---------------------------------------------------------------------------
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function normalize(raw) {
+      const data = Object.assign({}, DEFAULTS, raw || {});
+      data.format = FORMATS.includes(data.format) ? data.format : DEFAULTS.format;
+      data.preset = PRESET_NAMES.includes(data.preset) ? data.preset : DEFAULTS.preset;
+      data.exportSize = SIZES.includes(Number(data.exportSize)) ? Number(data.exportSize) : DEFAULTS.exportSize;
+      data.fps = FPS_VALUES.includes(Number(data.fps)) ? Number(data.fps) : DEFAULTS.fps;
+      data.webpQuality = clamp(Number(data.webpQuality) || DEFAULTS.webpQuality, 40, 100);
+      data.videoBitrate = BITRATES.includes(Number(data.videoBitrate)) ? Number(data.videoBitrate) : DEFAULTS.videoBitrate;
+      return data;
+    }
+
+    function matchingPreset(data) {
+      for (const [name, preset] of Object.entries(PRESETS)) {
+        if (
+          Number(data.exportSize) === preset.exportSize &&
+          Number(data.fps) === preset.fps &&
+          Number(data.webpQuality) === preset.webpQuality &&
+          Number(data.videoBitrate) === preset.videoBitrate
+        ) {
+          return name;
+        }
+      }
+      return 'custom';
+    }
+
+    function currentData() {
+      return normalize({
+        format: els.format.value,
+        preset: els.preset.value,
+        exportSize: Number(els.size.value),
+        fps: Number(els.fps.value),
+        webpQuality: Number(els.webpQuality.value),
+        videoBitrate: Number(els.videoBitrate.value)
+      });
+    }
+
+    function snapshot(data) {
+      return JSON.stringify(data);
+    }
+
+    function formatLabel(format) {
+      return ({ gif: 'GIF', apng: 'APNG', webp: 'WebP', webm: 'WebM', mp4: 'MP4' })[format] || 'GIF';
+    }
+
+    function presetLabel(preset) {
+      return preset === 'custom' ? 'Custom' : preset.charAt(0).toUpperCase() + preset.slice(1);
+    }
+
+    function syncFormatUI(format) {
+      const isWebP = format === 'webp';
+      const isVideo = format === 'webm' || format === 'mp4';
+      els.webpSection.hidden = !isWebP;
+      els.videoSection.hidden = !isVideo;
+
+      if (format === 'gif') {
+        els.formatNote.textContent = 'GIF is usually the most compatible option.';
+      } else if (format === 'apng') {
+        els.formatNote.textContent = 'APNG usually looks cleaner than GIF, but files can be larger.';
+      } else if (format === 'webp') {
+        els.formatNote.textContent = 'WebP uses the bundled JavaScript encoder. Some embedded web views may not preview animated WebP files even when the file itself is valid.';
+      } else {
+        els.formatNote.textContent = 'Video output uses the browser recorder path and the selected bitrate.';
+      }
+    }
+
+    function syncPreview() {
+      els.previewFormat.textContent = formatLabel(els.format.value);
+      els.previewPreset.textContent = presetLabel(els.preset.value);
+    }
+
+    function syncDirtyState() {
+      const dirty = snapshot(currentData()) !== savedSnapshot;
+      els.save.disabled = !dirty;
+      els.saveState.textContent = dirty ? 'Unsaved changes' : 'No unsaved changes';
+      els.saveState.classList.toggle('is-dirty', dirty);
+    }
+
+    function apply(data) {
+      els.format.value = data.format;
+      els.preset.value = data.preset;
+      els.size.value = String(data.exportSize);
+      els.fps.value = String(data.fps);
+      els.webpQuality.value = String(data.webpQuality);
+      els.webpQualityValue.textContent = String(data.webpQuality);
+      els.videoBitrate.value = String(data.videoBitrate);
+      syncFormatUI(data.format);
+      syncPreview();
+    }
+
+    function applyPreset(name) {
+      const preset = PRESETS[name];
+      if (!preset) return;
+      els.size.value = String(preset.exportSize);
+      els.fps.value = String(preset.fps);
+      els.webpQuality.value = String(preset.webpQuality);
+      els.webpQualityValue.textContent = String(preset.webpQuality);
+      els.videoBitrate.value = String(preset.videoBitrate);
+      els.preset.value = name;
+      syncPreview();
+      syncDirtyState();
+    }
+
+    function markCustom() {
+      els.preset.value = 'custom';
+      syncPreview();
+      syncDirtyState();
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(KEY);
+        const data = normalize(raw ? JSON.parse(raw) : null);
+        if (data.preset !== 'custom') data.preset = matchingPreset(data);
+        apply(data);
+        savedSnapshot = snapshot(currentData());
+        syncDirtyState();
+        els.status.textContent = 'Ready.';
+      } catch (error) {
+        console.error(error);
+        apply(DEFAULTS);
+        savedSnapshot = snapshot(currentData());
+        syncDirtyState();
+        els.status.textContent = 'Using default settings.';
+      }
+    }
+
+    // ---------------------------------------------------------------------------
+    // Settings event handlers
+    // ---------------------------------------------------------------------------
+
+    els.format.addEventListener('change', () => {
+      syncFormatUI(els.format.value);
+      syncPreview();
+      syncDirtyState();
+    });
+
+    els.preset.addEventListener('change', () => {
+      if (els.preset.value !== 'custom') applyPreset(els.preset.value);
+      else {
+        syncPreview();
+        syncDirtyState();
+      }
+    });
+
+    els.size.addEventListener('change', markCustom);
+    els.fps.addEventListener('change', markCustom);
+    els.videoBitrate.addEventListener('change', markCustom);
+    els.webpQuality.addEventListener('input', () => {
+      els.webpQualityValue.textContent = els.webpQuality.value;
+      markCustom();
+    });
+
+    els.save.addEventListener('click', () => {
+      try {
+        const data = currentData();
+        localStorage.setItem(KEY, JSON.stringify(data));
+        savedSnapshot = snapshot(data);
+        syncDirtyState();
+        els.status.textContent = `Saved ${formatLabel(data.format)} · ${presetLabel(data.preset)}.`;
+        window.grove?.settings?.changed?.();
+      } catch (error) {
+        console.error(error);
+        els.status.textContent = error.message || 'Could not save settings.';
+      }
+    });
+
+    load();
+  })();
+  </script>
+</body>
+</html>

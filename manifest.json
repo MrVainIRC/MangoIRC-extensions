@@ -1,0 +1,31 @@
+{
+  "grove": 1,
+  "id": "app.mango.grove.digitaltouch",
+  "name": "DigitalTouch",
+  "version": "0.1.0",
+  "description": "Create live animated touch messages with disappearing ink and touch effects.",
+  "author": {
+    "name": "MrVainIRC"
+  },
+  "entry": "index.html",
+  "readme": "README.md",
+  "presentation": {
+    "surfaces": [
+      "composer"
+    ],
+    "defaultSurface": "composer",
+    "minSize": {
+      "width": 320,
+      "height": 380
+    },
+    "defaultSize": {
+      "width": 420,
+      "height": 540
+    }
+  },
+  "capabilities": [
+    "uploads.use",
+    "storage"
+  ],
+  "settings": "settings.html"
+}

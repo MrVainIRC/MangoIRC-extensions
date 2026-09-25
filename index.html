@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>DigitalTouch</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="title-block">
+        <h1>DigitalTouch</h1>
+        <p id="status">Draw, touch, and send.</p>
+      </div>
+      <div class="top-actions">
+        <button id="play" class="icon-button" type="button" title="Replay" aria-label="Replay animation">↻</button>
+        <button id="undo" class="icon-button" type="button" title="Undo" aria-label="Undo">↶</button>
+        <button id="clear" class="icon-button danger-icon" type="button" title="Clear" aria-label="Clear">×</button>
+      </div>
+    </header>
+
+    <section class="stage-wrap" aria-label="DigitalTouch canvas">
+      <canvas id="stage"></canvas>
+      <div id="emptyHint" class="empty-hint">
+        <strong>Touch the canvas</strong>
+        <span>Apple Pencil, finger, mouse, or trackpad</span>
+      </div>
+      <div id="replayBadge" class="replay-badge" hidden>Replay</div>
+    </section>
+
+    <section class="toolbox" aria-label="DigitalTouch controls">
+      <div id="inkModes" class="tool-strip" role="radiogroup" aria-label="Ink style">
+        <button class="tool active" data-mode="sketch" aria-pressed="true" title="Ink" aria-label="Ink"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17.5 16.8 5.7a2 2 0 0 1 2.8 2.8L7.8 20.3 4 21l.7-3.8Z"/><path d="m14.8 7.7 2.8 2.8"/></svg></button>
+        <button class="tool" data-mode="glow" aria-pressed="false" title="Neon" aria-label="Neon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 13.8 9l5.7 1.8-5.7 1.8L12 18l-1.8-5.4-5.7-1.8L10.2 9 12 3.5Z"/><path d="M18 15.5 18.8 18l2.7.8-2.7.8L18 22l-.8-2.4-2.7-.8 2.7-.8.8-2.5Z"/></svg></button>
+        <button class="tool" data-mode="comet" aria-pressed="false" title="Comet" aria-label="Comet"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="16.5" cy="7.5" r="3.2"/><path d="M13.8 9.7 5 18.5M12 8 3.5 16.5M15.5 12 8.5 19"/></svg></button>
+        <button class="tool" data-mode="electric" aria-pressed="false" title="Electric" aria-label="Electric"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13.5 2-7 11h5l-1 9 7-12h-5l1-8Z"/></svg></button>
+      </div>
+
+      <div class="compact-row palette-row">
+        <div id="palette" class="palette" role="radiogroup" aria-label="Ink color">
+          <button class="swatch active" data-color="#ff375f" style="--swatch:#ff375f" aria-label="Pink" aria-pressed="true"></button>
+          <button class="swatch" data-color="#ff9f0a" style="--swatch:#ff9f0a" aria-label="Orange" aria-pressed="false"></button>
+          <button class="swatch" data-color="#ffd60a" style="--swatch:#ffd60a" aria-label="Yellow" aria-pressed="false"></button>
+          <button class="swatch" data-color="#30d158" style="--swatch:#30d158" aria-label="Green" aria-pressed="false"></button>
+          <button class="swatch" data-color="#64d2ff" style="--swatch:#64d2ff" aria-label="Cyan" aria-pressed="false"></button>
+          <button class="swatch" data-color="#0a84ff" style="--swatch:#0a84ff" aria-label="Blue" aria-pressed="false"></button>
+          <button class="swatch" data-color="#bf5af2" style="--swatch:#bf5af2" aria-label="Purple" aria-pressed="false"></button>
+          <button class="swatch" data-color="#ffffff" style="--swatch:#ffffff" aria-label="White" aria-pressed="false"></button>
+        </div>
+        <label class="mini-range" title="Stroke size">
+          <span>Size</span>
+          <input id="size" type="range" min="2" max="18" value="7" step="1">
+        </label>
+      </div>
+
+      <div class="effect-strip" aria-label="DigitalTouch effects">
+        <button class="effect" aria-pressed="false" data-effect="tap" type="button" title="Tap" aria-label="Tap"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.2" class="icon-fill"/><circle cx="12" cy="12" r="6"/><path d="M12 2.8v2.1M21.2 12h-2.1M12 21.2v-2.1M2.8 12h2.1"/></svg></button>
+        <button class="effect" aria-pressed="false" data-effect="fireball" type="button" title="Fireball" aria-label="Fireball"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 3.5c1.2 3-1.5 4.2-.2 6.6 1-1.7 2.3-2 3.2-3.5 2.6 2.4 3.5 5 2.6 8A7.2 7.2 0 0 1 5 13.8c-.3-2.7 1.2-4.8 3.6-6.6-.2 2.5 1.1 3.7 2 4.5-.2-3.6 1.8-5.4 2.9-8.2Z"/></svg></button>
+        <button class="effect" aria-pressed="false" data-effect="kiss" type="button" title="Kiss" aria-label="Kiss"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 12c2.1-1.1 4-3.7 7.5-2.2 3.5-1.5 5.4 1.1 7.5 2.2-2.4 4.1-4.5 6-7.5 6s-5.1-1.9-7.5-6Z"/><path d="M8 13.2c1.2.5 2.6.8 4 .8s2.8-.3 4-.8"/></svg></button>
+        <button class="effect" aria-pressed="false" data-effect="heartbeat" type="button" title="Heartbeat" aria-label="Heartbeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-10.2A4.8 4.8 0 0 1 13 6.3 4.8 4.8 0 0 1 21 9.8C21 15.7 12 20 12 20Z"/><path d="M3.5 12h4l1.5-3 2.2 6 1.8-4 1.3 2H21"/></svg></button>
+        <button class="effect" aria-pressed="false" data-effect="heartbreak" type="button" title="Heartbreak" aria-label="Heartbreak"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-10.2A4.8 4.8 0 0 1 13 6.3 4.8 4.8 0 0 1 21 9.8C21 15.7 12 20 12 20Z"/><path d="m13 5.8-3 5.1 3 1.4-2 5.2"/></svg></button>
+        
+      </div>
+
+      <div class="options-row">
+        <label class="inline-option">
+          <span>Speed</span>
+          <select id="speed">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.5">1.5×</option>
+            <option value="2">2×</option>
+          </select>
+        </label>
+        <label id="loopControl" class="inline-check">
+          <input id="loopToggle" type="checkbox" checked>
+          <span>Loop</span>
+        </label>
+        <div class="export-chip" aria-label="Export settings from extension settings">
+          <span id="exportChipLabel">GIF · Balanced</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="send-area">
+      <button id="sendGif" class="primary" type="button">Send GIF</button>
+    </section>
+  </main>
+
+  <script src="gif.js"></script>
+  <script src="webp-encoder.js"></script>
+  <script src="digitaltouch.js"></script>
+</body>
+</html>
