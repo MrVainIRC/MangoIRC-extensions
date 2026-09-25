@@ -113,14 +113,16 @@ jobs:
           BRANCH="release/$SLUG"
           TAG="$SLUG-v$VERSION"
           LATEST_TAG="$SLUG-latest"
+          ASSET_NAME="${EXTENSION}-v${VERSION}.grove"
 
           echo "slug=$SLUG" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "asset_name=$ASSET_NAME" >> "$GITHUB_OUTPUT"
 
       # -----------------------------------------------------------------------
-      # Release files
+      # Prepare release files before changing branches
       # -----------------------------------------------------------------------
 
       - name: Prepare release files
@@ -128,6 +130,7 @@ jobs:
         env:
           EXTENSION: ${{ inputs.extension }}
           VERSION: ${{ inputs.version }}
+          ASSET_NAME: ${{ steps.meta.outputs.asset_name }}
         run: |
           set -euo pipefail
 
@@ -143,18 +146,23 @@ jobs:
             cd "$EXTENSION"
 
             zip -qr \
-              "$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove" \
+              "$RUNNER_TEMP/release/$ASSET_NAME" \
               .
           )
 
           echo "Created Grove package:"
-          ls -lh "$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove"
+          ls -lh "$RUNNER_TEMP/release/$ASSET_NAME"
 
       # -----------------------------------------------------------------------
-      # Extension-specific source branch
+      # Build/update extension-specific release branch
+      #
+      # The branch contains only the extension files.
+      # Every extension release becomes exactly one commit.
+      # Development commits from main are not imported.
       # -----------------------------------------------------------------------
 
       - name: Build release branch
+        id: release_branch
         shell: bash
         env:
           EXTENSION: ${{ inputs.extension }}
@@ -171,9 +179,29 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git checkout --orphan __extension_release__
+          if git ls-remote \
+            --exit-code \
+            --heads \
+            origin \
+            "refs/heads/$RELEASE_BRANCH" \
+            >/dev/null 2>&1
+          then
+            echo "Existing release branch found: $RELEASE_BRANCH"
 
-          git rm -rf . >/dev/null 2>&1 || true
+            git fetch \
+              origin \
+              "refs/heads/$RELEASE_BRANCH:refs/remotes/origin/$RELEASE_BRANCH"
+
+            git checkout \
+              -B "$RELEASE_BRANCH" \
+              "origin/$RELEASE_BRANCH"
+          else
+            echo "Creating initial release branch: $RELEASE_BRANCH"
+
+            git checkout --orphan "$RELEASE_BRANCH"
+
+            git rm -rf . >/dev/null 2>&1 || true
+          fi
 
           find . \
             -mindepth 1 \
@@ -184,16 +212,35 @@ jobs:
           cp -a "$RELEASE_DIR/." .
 
           git add -A
-          git commit -m "$EXTENSION v$VERSION"
 
-          git branch -M "$RELEASE_BRANCH"
+          if git diff --cached --quiet; then
+            echo "Release branch already contains identical extension files."
+            echo "No new release commit required."
+          else
+            git commit \
+              -m "$EXTENSION v$VERSION"
 
-          git push --force \
-            origin \
-            "HEAD:refs/heads/$RELEASE_BRANCH"
+            git push \
+              origin \
+              "HEAD:refs/heads/$RELEASE_BRANCH"
+
+            echo "Created release commit:"
+            git log -1 --oneline
+          fi
+
+          RELEASE_COMMIT="$(git rev-parse HEAD)"
+          RELEASE_TREE="$(git rev-parse HEAD^{tree})"
+
+          echo "release_commit=$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "release_tree=$RELEASE_TREE" >> "$GITHUB_OUTPUT"
 
       # -----------------------------------------------------------------------
       # Permanent version tag
+      #
+      # Example:
+      # digitaltouch-v0.1.1
+      #
+      # Version tags are immutable.
       # -----------------------------------------------------------------------
 
       - name: Create or reuse version tag
@@ -204,45 +251,60 @@ jobs:
           TAG: ${{ steps.meta.outputs.tag }}
           EXTENSION: ${{ inputs.extension }}
           VERSION: ${{ inputs.version }}
+          RELEASE_COMMIT: ${{ steps.release_branch.outputs.release_commit }}
+          RELEASE_TREE: ${{ steps.release_branch.outputs.release_tree }}
         run: |
           set -euo pipefail
 
-          CURRENT_TREE="$(git rev-parse HEAD^{tree})"
-
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+          if git ls-remote \
+            --exit-code \
+            --tags \
+            origin \
+            "refs/tags/$TAG" \
+            >/dev/null 2>&1
+          then
             echo "Version tag already exists: $TAG"
 
-            git fetch --force \
+            git fetch \
+              --force \
               origin \
               "refs/tags/$TAG:refs/tags/$TAG"
 
             TAG_TREE="$(git rev-parse "$TAG^{tree}")"
 
-            if [[ "$TAG_TREE" != "$CURRENT_TREE" ]]; then
-              echo "Existing tag $TAG points to different source contents."
+            if [[ "$TAG_TREE" != "$RELEASE_TREE" ]]; then
+              echo "Existing tag $TAG points to different release contents."
               echo "Version tags are immutable and will not be overwritten."
               exit 1
             fi
 
             echo "Existing version tag matches the current release contents."
+
+            VERSION_COMMIT="$(git rev-list -n 1 "$TAG")"
           else
             git tag \
               -a "$TAG" \
+              "$RELEASE_COMMIT" \
               -m "$EXTENSION v$VERSION"
 
             git push \
               origin \
               "refs/tags/$TAG"
 
+            VERSION_COMMIT="$RELEASE_COMMIT"
+
             echo "Created version tag: $TAG"
           fi
-
-          VERSION_COMMIT="$(git rev-list -n 1 "$TAG")"
 
           echo "version_commit=$VERSION_COMMIT" >> "$GITHUB_OUTPUT"
 
       # -----------------------------------------------------------------------
       # Permanent version release
+      #
+      # Example:
+      # DigitalTouch v0.1.1
+      # Tag: digitaltouch-v0.1.1
+      # Asset: DigitalTouch-v0.1.1.grove
       # -----------------------------------------------------------------------
 
       - name: Create version release
@@ -253,10 +315,11 @@ jobs:
           TAG: ${{ steps.meta.outputs.tag }}
           EXTENSION: ${{ inputs.extension }}
           VERSION: ${{ inputs.version }}
+          ASSET_NAME: ${{ steps.meta.outputs.asset_name }}
         run: |
           set -euo pipefail
 
-          ASSET="$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove"
+          ASSET="$RUNNER_TEMP/release/$ASSET_NAME"
           NOTES_FILE="$RUNNER_TEMP/release/RELEASE_NOTES.md"
 
           if [[ ! -f "$ASSET" ]]; then
@@ -282,6 +345,11 @@ jobs:
 
       # -----------------------------------------------------------------------
       # Moving extension-specific latest tag
+      #
+      # Example:
+      # digitaltouch-latest
+      #
+      # This always points to the newest release commit.
       # -----------------------------------------------------------------------
 
       - name: Update latest tag
@@ -311,6 +379,12 @@ jobs:
 
       # -----------------------------------------------------------------------
       # Moving extension-specific latest release
+      #
+      # Example:
+      # DigitalTouch Latest — v0.1.1
+      #
+      # The previous latest release is removed and recreated using the
+      # updated latest tag, current release notes and current Grove package.
       # -----------------------------------------------------------------------
 
       - name: Create latest release
@@ -321,10 +395,11 @@ jobs:
           LATEST_TAG: ${{ steps.meta.outputs.latest_tag }}
           EXTENSION: ${{ inputs.extension }}
           VERSION: ${{ inputs.version }}
+          ASSET_NAME: ${{ steps.meta.outputs.asset_name }}
         run: |
           set -euo pipefail
 
-          ASSET="$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove"
+          ASSET="$RUNNER_TEMP/release/$ASSET_NAME"
           NOTES_FILE="$RUNNER_TEMP/release/RELEASE_NOTES.md"
 
           if [[ ! -f "$ASSET" ]]; then
@@ -362,6 +437,7 @@ jobs:
           RELEASE_BRANCH: ${{ steps.meta.outputs.branch }}
           TAG: ${{ steps.meta.outputs.tag }}
           LATEST_TAG: ${{ steps.meta.outputs.latest_tag }}
+          ASSET_NAME: ${{ steps.meta.outputs.asset_name }}
           EXTENSION: ${{ inputs.extension }}
           VERSION: ${{ inputs.version }}
         run: |
@@ -380,7 +456,7 @@ jobs:
 
             if [[ "${{ inputs.create_release }}" == "true" ]]; then
               echo "- Version release: \`$EXTENSION v$VERSION\`"
-              echo "- Grove asset: \`${EXTENSION}-${VERSION}.grove\`"
+              echo "- Grove asset: \`$ASSET_NAME\`"
               echo "- Release notes: \`$EXTENSION/RELEASE_NOTES.md\`"
             else
               echo "- Version release: not created"
