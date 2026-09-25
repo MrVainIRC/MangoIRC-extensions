@@ -97,9 +97,9 @@
     return data;
   }
 
-  async function loadExportSettings() {
+  function loadExportSettings() {
     try {
-      const raw = await window.grove?.secrets?.application?.get?.(SETTINGS_KEY);
+      const raw = localStorage.getItem(SETTINGS_KEY);
       exportSettings = normalizeExportSettings(raw ? JSON.parse(raw) : null);
     } catch (_) {
       exportSettings = { ...DEFAULT_EXPORT_SETTINGS };
@@ -1316,8 +1316,13 @@
   new ResizeObserver(resizeCanvas).observe(stage);
   window.addEventListener('resize', () => { syncViewport(); resizeCanvas(); });
   window.visualViewport?.addEventListener('resize', syncViewport);
-  (async () => {
-    await loadExportSettings();
+  window.grove?.on?.('settingsChanged', () => {
+    loadExportSettings();
+    syncExportUI();
+  });
+
+  (() => {
+    loadExportSettings();
     syncExportUI();
     syncViewport();
     resizeCanvas();

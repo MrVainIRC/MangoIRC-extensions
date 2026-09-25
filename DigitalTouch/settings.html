@@ -346,9 +346,9 @@
       syncDirtyState();
     }
 
-    async function load() {
+    function load() {
       try {
-        const raw = await window.grove?.secrets?.application?.get?.(KEY);
+        const raw = localStorage.getItem(KEY);
         const data = normalize(raw ? JSON.parse(raw) : null);
         if (data.preset !== 'custom') data.preset = matchingPreset(data);
         apply(data);
@@ -390,16 +390,14 @@
       markCustom();
     });
 
-    els.save.addEventListener('click', async () => {
+    els.save.addEventListener('click', () => {
       try {
-        if (!window.grove?.secrets?.application?.set) {
-          throw new Error('Secure settings are unavailable in this Mango build.');
-        }
         const data = currentData();
-        await window.grove.secrets.application.set(KEY, JSON.stringify(data));
+        localStorage.setItem(KEY, JSON.stringify(data));
         savedSnapshot = snapshot(data);
         syncDirtyState();
         els.status.textContent = `Saved ${formatLabel(data.format)} · ${presetLabel(data.preset)}.`;
+        window.grove?.settings?.changed?.();
       } catch (error) {
         console.error(error);
         els.status.textContent = error.message || 'Could not save settings.';

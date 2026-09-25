@@ -24,7 +24,8 @@
     }
   },
   "capabilities": [
-    "uploads.use"
+    "uploads.use",
+    "storage"
   ],
   "settings": "settings.html"
 }
