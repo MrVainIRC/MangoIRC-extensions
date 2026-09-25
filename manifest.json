@@ -1,0 +1,26 @@
+{
+  "grove": 1,
+  "id": "app.mango.grove.linkguard",
+  "name": "LinkGuard",
+  "version": "0.1.0",
+  "description": "Locally checks links in IRC messages against phishing and scam lists and marks listed/not-listed URLs.",
+  "author": {
+    "name": "LinkGuard"
+  },
+  "readme": "README.md",
+  "entry": "index.html",
+  "settings": "settings.html",
+  "presentation": {
+    "surfaces": [
+      "headless"
+    ],
+    "scope": "server"
+  },
+  "capabilities": [
+    "messages.filter.inbound",
+    "storage"
+  ],
+  "hostPermissions": [
+    "https://raw.githubusercontent.com"
+  ]
+}
