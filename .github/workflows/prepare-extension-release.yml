@@ -1,0 +1,192 @@
+name: Prepare extension release
+
+on:
+  workflow_dispatch:
+    inputs:
+      extension:
+        description: Extension folder in the repository root, for example DigitalTouch
+        required: true
+        type: string
+      version:
+        description: Release version without the v prefix, for example 0.1.0
+        required: true
+        type: string
+      create_tag:
+        description: Create a version tag on the release branch
+        required: true
+        default: true
+        type: boolean
+      create_release:
+        description: Create a GitHub Release and attach the .grove package
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Validate extension
+        id: meta
+        shell: bash
+        env:
+          EXTENSION: ${{ inputs.extension }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([-.+][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid version: $VERSION"
+            exit 1
+          fi
+
+          if [[ "$EXTENSION" == *"/"* || "$EXTENSION" == "." || "$EXTENSION" == ".." ]]; then
+            echo "Extension must be a repository-root folder."
+            exit 1
+          fi
+
+          if [[ ! -d "$EXTENSION" ]]; then
+            echo "Extension folder does not exist: $EXTENSION"
+            exit 1
+          fi
+
+          if [[ ! -f "$EXTENSION/manifest.json" ]]; then
+            echo "Missing $EXTENSION/manifest.json"
+            exit 1
+          fi
+
+          MANIFEST_VERSION="$(jq -r '.version // empty' "$EXTENSION/manifest.json")"
+
+          if [[ "$MANIFEST_VERSION" != "$VERSION" ]]; then
+            echo "manifest.json version ($MANIFEST_VERSION) does not match requested version ($VERSION)."
+            exit 1
+          fi
+
+          SLUG="$(printf '%s' "$EXTENSION" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9._-]+/-/g; s/^-+|-+$//g')"
+
+          BRANCH="release/$SLUG"
+          TAG="$SLUG-v$VERSION"
+
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build Grove package
+        shell: bash
+        env:
+          EXTENSION: ${{ inputs.extension }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$RUNNER_TEMP/package"
+
+          (
+            cd "$EXTENSION"
+            zip -qr "$RUNNER_TEMP/package/${EXTENSION}-${VERSION}.grove" .
+          )
+
+      - name: Build release branch
+        shell: bash
+        env:
+          EXTENSION: ${{ inputs.extension }}
+          VERSION: ${{ inputs.version }}
+          RELEASE_BRANCH: ${{ steps.meta.outputs.branch }}
+        run: |
+          set -euo pipefail
+
+          SOURCE_DIR="$GITHUB_WORKSPACE/$EXTENSION"
+          RELEASE_DIR="$(mktemp -d)"
+
+          cp -a "$SOURCE_DIR/." "$RELEASE_DIR/"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git checkout --orphan __extension_release__
+          git rm -rf . >/dev/null 2>&1 || true
+
+          find . \
+            -mindepth 1 \
+            -maxdepth 1 \
+            -not -name .git \
+            -exec rm -rf {} +
+
+          cp -a "$RELEASE_DIR/." .
+
+          git add -A
+          git commit -m "$EXTENSION v$VERSION"
+          git branch -M "$RELEASE_BRANCH"
+
+          git push --force origin "HEAD:refs/heads/$RELEASE_BRANCH"
+
+      - name: Create tag
+        if: ${{ inputs.create_tag }}
+        shell: bash
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          EXTENSION: ${{ inputs.extension }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag already exists: $TAG"
+            echo "Existing release tags are never overwritten."
+            exit 1
+          fi
+
+          git tag -a "$TAG" -m "$EXTENSION v$VERSION"
+          git push origin "refs/tags/$TAG"
+
+      - name: Create GitHub Release
+        if: ${{ inputs.create_release && inputs.create_tag }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          EXTENSION: ${{ inputs.extension }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          ASSET="$RUNNER_TEMP/package/${EXTENSION}-${VERSION}.grove"
+
+          gh release create "$TAG" "$ASSET" \
+            --title "$EXTENSION v$VERSION" \
+            --notes "Release of $EXTENSION v$VERSION."
+
+      - name: Summary
+        shell: bash
+        env:
+          RELEASE_BRANCH: ${{ steps.meta.outputs.branch }}
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          {
+            echo "## Extension release prepared"
+            echo
+            echo "- Branch: \`$RELEASE_BRANCH\`"
+
+            if [[ "${{ inputs.create_tag }}" == "true" ]]; then
+              echo "- Tag: \`$TAG\`"
+            else
+              echo "- Tag: not created"
+            fi
+
+            if [[ "${{ inputs.create_release }}" == "true" ]]; then
+              echo "- GitHub Release: created"
+            else
+              echo "- GitHub Release: not created"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
