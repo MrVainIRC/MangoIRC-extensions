@@ -111,7 +111,7 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "latest_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Build Grove package
+      - name: Prepare release files
         shell: bash
         env:
           EXTENSION: ${{ inputs.extension }}
@@ -119,15 +119,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          mkdir -p "$RUNNER_TEMP/package"
+          mkdir -p "$RUNNER_TEMP/release"
+
+          if [[ "${{ inputs.create_release }}" == "true" ]]; then
+            cp "$EXTENSION/RELEASE_NOTES.md" \
+              "$RUNNER_TEMP/release/RELEASE_NOTES.md"
+          fi
 
           (
             cd "$EXTENSION"
-            zip -qr "$RUNNER_TEMP/package/${EXTENSION}-${VERSION}.grove" .
+            zip -qr \
+              "$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove" \
+              .
           )
 
           echo "Created Grove package:"
-          ls -lh "$RUNNER_TEMP/package/${EXTENSION}-${VERSION}.grove"
+          ls -lh "$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove"
 
       - name: Build release branch
         shell: bash
@@ -206,14 +213,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          ASSET="$RUNNER_TEMP/package/${EXTENSION}-${VERSION}.grove"
-          NOTES_FILE="$GITHUB_WORKSPACE/$EXTENSION/RELEASE_NOTES.md"
+          ASSET="$RUNNER_TEMP/release/${EXTENSION}-${VERSION}.grove"
+          NOTES_FILE="$RUNNER_TEMP/release/RELEASE_NOTES.md"
+
+          if [[ ! -f "$ASSET" ]]; then
+            echo "Grove package not found: $ASSET"
+            exit 1
+          fi
+
+          if [[ ! -f "$NOTES_FILE" ]]; then
+            echo "Release notes not found: $NOTES_FILE"
+            exit 1
+          fi
 
           gh release create "$TAG" "$ASSET" \
             --title "$EXTENSION v$VERSION" \
             --notes-file "$NOTES_FILE"
 
       - name: Summary
+        if: ${{ always() }}
         shell: bash
         env:
           RELEASE_BRANCH: ${{ steps.meta.outputs.branch }}
@@ -223,7 +241,7 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           {
-            echo "## Extension release prepared"
+            echo "## Extension release"
             echo
             echo "- Extension: \`$EXTENSION\`"
             echo "- Version: \`$VERSION\`"
@@ -242,10 +260,7 @@ jobs:
             fi
 
             if [[ "${{ inputs.create_release }}" == "true" ]]; then
-              echo "- GitHub Release: created"
-              echo "- Release notes: \`$EXTENSION/RELEASE_NOTES.md\`"
               echo "- Grove asset: \`${EXTENSION}-${VERSION}.grove\`"
-            else
-              echo "- GitHub Release: not created"
+              echo "- Release notes source: \`$EXTENSION/RELEASE_NOTES.md\`"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
